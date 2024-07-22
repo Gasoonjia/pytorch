@@ -27,6 +27,7 @@
 #include <c10/core/DispatchKeySet.h>
 #include <c10/util/AbortHandler.h>
 #include <c10/util/Backtrace.h>
+#include <c10/util/Feature.h>
 #include <c10/util/Logging.h>
 #include <c10/util/irange.h>
 #include <c10/util/thread_name.h>
@@ -1148,6 +1149,33 @@ PyObject* THPModule_setCheckSparseTensorInvariants(
   END_HANDLE_TH_ERRORS
 }
 
+PyObject* THPModule_c10_feature_enabled(PyObject* _unused, PyObject* args) {
+  HANDLE_TH_ERRORS
+  PyObject* the_namespace = nullptr;
+  PyObject* feature = nullptr;
+  if (!PyArg_ParseTuple(args, "OO", &the_namespace, &feature)) {
+    return nullptr;
+  }
+  if (!PyUnicode_Check(the_namespace) || !PyUnicode_Check(feature)) {
+    PyErr_SetString(PyExc_TypeError, "Arguments must be strings");
+    return nullptr;
+  }
+  const char* c_namespace = PyUnicode_AsUTF8(the_namespace);
+  if (!c_namespace) {
+    return nullptr;
+  }
+  const char* c_feature = PyUnicode_AsUTF8(feature);
+  if (!c_feature) {
+    return nullptr;
+  }
+  if (c10::FeatureEnabled(c_namespace, c_feature)) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
+  END_HANDLE_TH_ERRORS
+}
+
 PyObject* THPModule_checkSparseTensorInvariants(
     PyObject* _unused,
     PyObject* noargs) {
@@ -1546,6 +1574,7 @@ static PyMethodDef TorchMethods[] = { // NOLINT
      (PyCFunction)(void (*)())THPModule_has_torch_function_variadic,
      METH_FASTCALL,
      nullptr},
+    {"_c10_feature_enabled", THPModule_c10_feature_enabled, METH_VARARGS, nullptr},
     {nullptr, nullptr, 0, nullptr}};
 
 void THCPStream_init(PyObject* module);
