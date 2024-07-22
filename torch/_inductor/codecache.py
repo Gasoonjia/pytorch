@@ -185,10 +185,23 @@ class CacheBase:
                     ).name,
                 },
                 "version": {
-                    "cuda": torch.version.cuda,
                     "triton": triton_version,
                 },
             }
+            if torch.version.cuda is not None:
+                system["device"] = {
+                    "name": torch.cuda.get_device_properties(
+                        torch.cuda.current_device()
+                    ).name,
+                }
+                system["version"]["cuda"] = torch.version.cuda
+            else:
+                system["device"] = {
+                    "name": torch.cuda.get_device_properties(
+                        torch.cuda.current_device()
+                    ).gcnArchName,
+                }
+                system["version"]["hip"] = torch.version.hip
         except (AssertionError, RuntimeError):
             # If cuda is not installed, none of the above config is relevant.
             system = {}
